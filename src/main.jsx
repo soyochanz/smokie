@@ -129,17 +129,23 @@ function App() {
   const heroRef = useRef(null);
   const videoRef = useRef(null);
   const videoDuration = useRef(0);
+  const lastVideoTime = useRef(-1);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end end'] });
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 72, damping: 24, mass: .32, restDelta: .0001 });
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: .25, restDelta: .0001 });
+  const videoProgress = useTransform(smoothProgress, [0, .84, 1], [0, 1, 1]);
   const introOpacity = useTransform(smoothProgress, [0, .16, .38], [1, 1, 0]);
   const introY = useTransform(smoothProgress, [0, .38], [0, -70]);
   const endOpacity = useTransform(smoothProgress, [.68, .86, 1], [0, 0, 1]);
   const progressScale = useTransform(smoothProgress, [0, 1], [0, 1]);
   const smokeDrift = useTransform(smoothProgress, [0, 1], ['-4%', '8%']);
 
-  useMotionValueEvent(smoothProgress, 'change', latest => {
+  useMotionValueEvent(videoProgress, 'change', latest => {
     if (!videoRef.current || !videoDuration.current) return;
-    videoRef.current.currentTime = Math.min(videoDuration.current - .04, Math.max(.01, latest * videoDuration.current));
+    const finalFrame = videoDuration.current - (1 / 24);
+    const nextTime = Math.min(finalFrame, Math.max(0, latest * finalFrame));
+    if (Math.abs(nextTime - lastVideoTime.current) < 1 / 30) return;
+    videoRef.current.currentTime = nextTime;
+    lastVideoTime.current = nextTime;
   });
   useEffect(() => {
     const nodes = document.querySelectorAll('.reveal');
@@ -167,7 +173,7 @@ function App() {
           <video
             ref={videoRef}
             className="hero-scrub-video"
-            src="/assets/smokie-decompose.mp4"
+            src="/assets/smokie-decompose-scrub.mp4"
             preload="auto"
             autoPlay
             muted
@@ -177,7 +183,8 @@ function App() {
               const video = e.currentTarget;
               video.pause();
               videoDuration.current = video.duration;
-              video.currentTime = Math.min(video.duration - .04, smoothProgress.get() * video.duration);
+              const finalFrame = video.duration - (1 / 24);
+              video.currentTime = Math.min(finalFrame, videoProgress.get() * finalFrame);
             }}
           />
           <motion.div className="smoke smoke-one" style={{ x: smokeDrift }} />
@@ -222,15 +229,25 @@ function App() {
         <div className="menu-foot"><span>También hay patatas, sides y cosas para mojar.</span><a href="#">VER CARTA COMPLETA <ArrowUpRight size={15}/></a></div>
       </section>
 
-      <section className="booking-cta reveal">
+      <section className="booking-cta reveal" id="reservas">
         <div className="cta-top"><span>04 — TU MESA</span><span>MAR — DOM · 13:30 — 00:00</span></div>
         <h2>VEN CON<br/><em>HAMBRE.</em></h2>
+        <img className="cta-burger" src="/assets/smokie-darkside.png" alt="Hamburguesa Smokie en su caja The dark side of the food" />
         <div className="cta-bottom"><p>Nosotros ponemos<br/>el resto.</p><button className="primary light" onClick={() => setBooking(true)}>RESERVAR MESA <ArrowUpRight/></button></div>
       </section>
 
       <section className="location" id="visitanos">
         <div className="location-copy"><span>05 — ENCUÉNTRANOS</span><h2>JUNTO AL<br/>MEDITERRÁNEO,<br/><em>MOJÁCAR.</em></h2><p>Paseo del Mediterráneo, 237<br/>04638 Mojácar, Almería</p><a href="https://www.google.com/maps/search/?api=1&query=Paseo+del+Mediterraneo+237+Mojacar" target="_blank" rel="noreferrer">CÓMO LLEGAR <ArrowUpRight size={15}/></a><a href="tel:+34611334597">RESERVAS · 611 334 597 <ArrowUpRight size={15}/></a></div>
-        <div className="map-art"><div className="map-grid"/><div className="map-pin"><span>SM</span><i>ESTÁS AQUÍ</i></div><div className="street s1">PASEO DEL MEDITERRÁNEO</div><div className="street s2">MAR MEDITERRÁNEO</div></div>
+        <div className="map-art real-map">
+          <iframe
+            title="Mapa de Smokie Madriz en Mojácar"
+            src="https://www.google.com/maps?q=Paseo+del+Mediterr%C3%A1neo+237,+04638+Moj%C3%A1car,+Almer%C3%ADa&output=embed"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+          />
+          <a className="map-open" href="https://www.google.com/maps/search/?api=1&query=Paseo+del+Mediterraneo+237+Mojacar" target="_blank" rel="noreferrer">ABRIR EN MAPS <ArrowUpRight size={14}/></a>
+        </div>
       </section>
     </main>
 
